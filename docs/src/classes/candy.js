@@ -1,21 +1,19 @@
-/**
- * Represents a candy in the game.
- */
+/** Collecting three grants an extra life. */
 class Candy extends Objects {
-  /**
-   * Creates a new Candy instance.
-   * [x, y] - position of candy, candy is on the cloud.
-   * size - The size of candy's image.
-   */
   constructor(cloud) {
     super(cloud);
     this.size = 50;
+    // The candy art is larger than other objects and needs an offset to look
+    // like it is resting on the cloud. bounds() picks this up, so the hitbox
+    // follows the sprite.
+    this.drawOffsetY = 20;
   }
-  move(){
+
+  move() {
     super.move();
   }
-  
+
   show() {
-    image(candyImg, this.x, this.y + 20, this.size, this.size);
+    image(candyImg, this.x, this.y + this.drawOffsetY, this.size, this.size);
   }
 }

@@ -1,10 +1,51 @@
-html, body {
+/*
+ * The canvas keeps its fixed 800x600 coordinate space; CSS only scales it to
+ * fill the window. p5 divides pointer coordinates by the same scale, so game
+ * logic never needs to know the display size.
+ */
+
+html,
+body {
   margin: 0;
   padding: 0;
-  display: grid;
-  place-items: center;
+  height: 100%;
+  background: #8fd3ef;
+  overflow: hidden;
 }
+
+body {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  /* Avoids text selection and tap highlighting on touch devices. */
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+main {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
 canvas {
   display: block;
-  margin-top: 10%;
+
+  /* createCanvas() writes inline width/height, which outrank normal rules,
+     so both need !important to be overridden here. */
+
+  /* Width is the smaller of the container and the window height converted to
+     4:3, so the canvas grows to fill whichever axis is the constraint.
+     max-width alone would only ever shrink an oversized canvas, never scale
+     800x600 up. */
+  aspect-ratio: 800 / 600;
+  width: min(100%, calc(100vh * 800 / 600)) !important;
+  height: auto !important;
+
+  /* Prevents scrolling and double-tap zoom while using the on-screen buttons. */
+  touch-action: none;
 }

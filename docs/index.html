@@ -1,25 +1,41 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
+    <meta charset="utf-8" />
+    <!-- Without this, mobile browsers lay out at a 980px virtual width and
+         then shrink the whole page. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="description" content="Up Up Angel — jump from cloud to cloud, dodge ghosts and hellfire, and reach the halo." />
+    <meta name="theme-color" content="#8fd3ef" />
+    <title>Up Up Angel</title>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.11.1/p5.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.11.1/addons/p5.sound.min.js"></script>
     <link rel="stylesheet" type="text/css" href="style.css">
-    <meta charset="utf-8" />
-
   </head>
   <body>
     <main>
     </main>
+
+    <!-- Loaded as classic scripts sharing one global scope, so order matters:
+         a base class must come before anything that extends it. -->
     <script src="src/classes/player.js"></script>
     <script src="src/classes/cloud.js"></script>
     <script src="src/classes/objects.js"></script>
     <script src="src/classes/lifeHeart.js"></script>
     <script src="src/classes/movingCloud.js"></script>
+    <script src="src/classes/springCloud.js"></script>
+    <script src="src/classes/vanishingCloud.js"></script>
+    <script src="src/classes/fallingCloud.js"></script>
     <script src="src/classes/danger.js"></script>
     <script src="src/classes/halo.js"></script>
     <script src="src/classes/monster.js"></script>
     <script src="src/classes/candy.js"></script>
     <script src="src/classes/plateform.js"></script>
+
+    <script src="src/score.js"></script>
+    <script src="src/controls.js"></script>
+    <script src="src/endless.js"></script>
     <script src="src/sketch.js"></script>
   </body>
 </html>

@@ -1,148 +1,226 @@
-/**
- * Represents a player in the game.
- */
+// Horizontal movement feel. Keyboard input is binary, so acceleration and
+// friction have to be added explicitly to avoid a snap-on/snap-off slide.
+const MOVE_TUNING = {
+  accel: 1.2,        // speed gained per frame while a direction is held
+  maxSpeed: 5.5,     // horizontal speed cap
+  friction: 0.80,    // fraction of speed kept per frame with no input
+  airControl: 0.80,  // acceleration multiplier while airborne
+  stopEpsilon: 0.05, // below this speed, snap to zero
+  tiltRadians: 0.22, // sprite tilt at full speed (~12.6 degrees)
+};
+
+// Jump assists. Each one closes a gap between when the player thinks they
+// pressed jump and when the game would otherwise accept it.
+const JUMP_TUNING = {
+  coyoteFrames: 6,     // grace period for jumping after leaving a platform
+  bufferFrames: 8,     // how long an early jump press is remembered
+  cutMultiplier: 0.65, // rise speed kept when the key is released early
+};
+
 class Player {
-  /**
-   * Creates a new Player instance.
-   * [x, y] - Initially, player should be at position[width/2, height]
-   * pace - The pace of the player, for common player pace is 5, while for angle pace is 3.
-   * size - The size of player's image.
-   * maxX - The most right position movingCloud can move to. Initially, the total distance that movingCloud can move is 2/3 of width of canvas.
-   * minX - The most left position movingCloud can move to.
-   * direction - The direction depends on the last move direction. Initially direction is right. Let left = -1, right = 1.
-   * jumpPower - When pressing space, player can jump 40.
-   * gravity - After jumping, player can fall down automatically, until reach the bottom of canvas or a cloud.
-   * prevY - After jumping, storing the previous height.
-   * currentCloud - Current cloud player is landing on.
-   * cloudOffsetX - Width distance between player.x and current cloud.x.
-   * isControlled - If player is controlled to move left or right.
-   * isJumping - If player is jumping.
-   * isStart - If player starts from bottom of the canvas.
-   */
   constructor(x, y) {
     this.size = 40;
     this.x = x;
     this.pace = 5;
     this.y = y - this.size / 2;
     this.direction = 1;
-    this.jumpPower = -15;  // 調整 jumpPower 為較小的數值
-    this.gravity = 0.8;    // 可根據需要調整重力值
-    this.velocity = 0;     // 垂直速度
-    this.prevY = this.y;   // 用來儲存上一幀的 y 值
-
-    // 當落在移動雲上時，記錄該雲以及相對偏移與落地高度    
-    this.currentCloud = null;
-    this.cloudOffsetX = 0;
-
-    // 是否收到左右操控（true 表示有操控輸入）
-    this.isControlled = false;
-
-    // 新增跳躍標記
-    this.isJumping = false;
-    this.isStart = true;
-  }
-  
-  update() {
-    // 儲存上一幀的 y 值
+    this.jumpPower = -15;
+    this.gravity = 0.8;
+    this.velocity = 0;
     this.prevY = this.y;
 
-    // 如果玩家目前附著在移動雲上，且不在跳躍狀態
+    this.currentCloud = null;
+    this.isControlled = false;
+    this.isJumping = false;
+    this.isStart = true;
+
+    this.coyoteFrames = 0;
+    this.jumpBufferFrames = 0;
+    this.jumpHeld = false;
+
+    this.velocityX = 0;
+    this.inputDir = 0;
+
+    // Jump multiplier from the current footing. Stored rather than read at jump
+    // time because coyote time allows jumping after currentCloud is already null.
+    this.jumpMultiplier = 1;
+  }
+
+  /**
+   * Registers the intent to jump. updateJumpAssist() decides whether it
+   * actually happens, so a press made slightly too early is not discarded.
+   */
+  requestJump() {
+    // Key auto-repeat would otherwise refill the buffer and turn a held key
+    // into continuous bouncing.
+    if (this.jumpHeld) {
+      return;
+    }
+    this.jumpHeld = true;
+    this.jumpBufferFrames = JUMP_TUNING.bufferFrames;
+  }
+
+  /** Releasing mid-rise cuts the ascent short, giving variable jump height. */
+  releaseJump() {
+    this.jumpHeld = false;
+    if (this.velocity < 0) {
+      this.velocity *= JUMP_TUNING.cutMultiplier;
+    }
+  }
+
+  isGrounded() {
+    return !!this.currentCloud ||
+           this.y >= plateform.y - this.size / 2 - grassHeight - 0.5;
+  }
+
+  /**
+   * Maintains coyote time and the jump buffer, and jumps when both allow it.
+   * Called after landing checks so a buffered jump can fire on the landing frame.
+   */
+  updateJumpAssist() {
+    const grounded = this.isGrounded();
+    if (grounded) {
+      this.coyoteFrames = JUMP_TUNING.coyoteFrames;
+    }
+
+    // Tested before decrementing, so coyoteFrames is the number of usable frames.
+    // A negative velocity means the player is already rising.
+    if (this.jumpBufferFrames > 0 && this.coyoteFrames > 0 && this.velocity >= 0) {
+      this.jump();
+      this.jumpBufferFrames = 0;
+      this.coyoteFrames = 0;
+      return;
+    }
+
+    if (this.jumpBufferFrames > 0) {
+      this.jumpBufferFrames--;
+    }
+    if (!grounded && this.coyoteFrames > 0) {
+      this.coyoteFrames--;
+    }
+  }
+
+  update() {
+    this.prevY = this.y;
+
+    // Horizontal first, so the landing checks below see the current x.
+    this.updateHorizontal();
+
     if (this.currentCloud && !this.isJumping) {
-      // 檢查玩家是否超出雲的水平範圍
-      if (this.x + this.size / 2 < this.currentCloud.x - this.currentCloud.w / 2 ||
-        this.x + this.size / 2 > this.currentCloud.x + this.currentCloud.w / 2) {
+      const cloud = this.currentCloud;
+      // Detach if the cloud is gone or the player has walked off its edge.
+      if (!cloud.isSolid() ||
+        this.x + this.size / 2 < cloud.x - cloud.w / 2 ||
+        this.x + this.size / 2 > cloud.x + cloud.w / 2) {
         this.currentCloud = null;
       } else {
-        if (!this.isControlled && this.currentCloud instanceof MovingCloud) {
-          this.x = this.currentCloud.x + this.cloudOffsetX;
+        // Carried along by a moving cloud, added to the player's own momentum.
+        if (cloud instanceof MovingCloud) {
+          this.x += cloud.lastDelta;
         }
+        // Follow vertical movement too, so a falling cloud takes the player with it.
+        this.y = cloud.y - cloud.h / 2 - this.size / 2;
         this.velocity = 0;
       }
     } else {
-      // 沒有附著，或在跳躍中：正常受重力影響
       this.y += this.velocity;
       this.velocity += this.gravity;
     }
 
-    // 當玩家跳躍後開始下落時，取消跳躍狀態
     if (this.isJumping && this.velocity > 0) {
       this.isJumping = false;
     }
 
-    // 檢查與雲的碰撞（僅在不處於跳躍狀態下進行）
+    // Landing. Swept against prevY so fast falls cannot pass through a cloud.
     if (!this.isJumping) {
       for (let cloud of clouds) {
         if (this.currentCloud) break;
         let cloudTop = cloud.y - cloud.h / 2;
         if (
+          cloud.isSolid() &&
           this.velocity > 0 &&
           (this.prevY + this.size / 2) <= cloudTop &&
           (this.y + this.size / 2) >= cloudTop &&
           this.x + this.size / 2 >= cloud.x - cloud.w / 2 &&
           this.x + this.size / 2 <= cloud.x + cloud.w / 2
         ) {
-          if (cloud instanceof MovingCloud) {
-            this.cloudOffsetX = this.x - cloud.x;
-          }
           this.y = cloudTop - this.size / 2;
           this.velocity = 0;
           this.currentCloud = cloud;
+          this.jumpMultiplier = cloud.jumpMultiplier();
+          cloud.onLanded(this);
+          scheduleCameraStep(this);
         }
       }
     }
 
-    // 若玩家落到底部，解除附著並處理生命損失
+    // Hitting the ground costs a life, except on the very first descent.
     if (this.y + this.size / 2 >= plateform.y - grassHeight) {
       this.y = plateform.y - this.size / 2 - grassHeight;
       this.velocity = 0;
       this.currentCloud = null;
+      this.jumpMultiplier = 1;
       if (!this.isStart) {
         this.loseLife();
         this.isStart = true;
       }
     }
-    
-    // 每一幀結束前，重置操控標記
+
+    // After landing checks, so a buffered jump can be consumed immediately.
+    this.updateJumpAssist();
+
     this.isControlled = false;
 
-    if ((this.y < canvasHeight / 2 && clouds[clouds.length - 1].y < canvasHeight) || (this.y > canvasHeight / 2 && plateform.y > canvasHeight)) {
-      // 計算玩家距離中線的差距
-      let diff = canvasHeight / 2 - this.y;
-      // 設定一個平滑係數，例如 0.1，這個值可以根據遊戲需求調整
-      let shiftAmount = diff * 0.1;
-      shiftScreen(shiftAmount);
-      // 讓玩家的 y 座標逐漸往中線靠攏
-      this.y += shiftAmount;
-    }
+    // Camera lives in sketch.js because it moves the world, not the player.
+    updateCamera(this);
   }
-  
+
+  /** Records this frame's horizontal input; updateHorizontal() applies it. */
   move(dir) {
-    // 玩家左右移動（允許操控時調整位置）
     this.direction = dir;
-    let newX = this.x + dir * this.pace;
-    if (newX < this.size / 2) {
-      newX = this.size / 2;
-    } else if (newX > canvasWidth - this.size / 2) {
-      newX = canvasWidth - this.size / 2;
-    }
-    this.x = newX;
-    // 如果附著在移動雲上，同步更新與雲的相對偏移
-    if (this.currentCloud) {
-      this.cloudOffsetX = this.x - this.currentCloud.x;
-    }
-    // 設定本幀有操控輸入，這樣 update() 就不會覆蓋玩家輸入
+    this.inputDir = dir;
     this.isControlled = true;
   }
-  
-  jump() {
-    // 允許跳躍（無論是在地面或雲上，只要速度為 0）
-    if (this.velocity === 0) {
-      this.isStart = false;
-      this.velocity = this.jumpPower;
-      // 跳躍時解除附著狀態
-      this.currentCloud = null;
-      jumpSound.play();
+
+  /**
+   * Accelerates toward the speed cap while a direction is held and coasts to a
+   * stop otherwise. Acceleration is reduced in the air so ground control feels
+   * firmer than air control.
+   */
+  updateHorizontal() {
+    const t = MOVE_TUNING;
+    const accel = t.accel * (this.isGrounded() ? 1 : t.airControl);
+
+    if (this.inputDir !== 0) {
+      this.velocityX += this.inputDir * accel;
+      this.velocityX = max(-t.maxSpeed, min(t.maxSpeed, this.velocityX));
+    } else {
+      this.velocityX *= t.friction;
+      if (abs(this.velocityX) < t.stopEpsilon) {
+        this.velocityX = 0;
+      }
     }
+
+    this.x += this.velocityX;
+
+    // Stop dead at the edges; keeping speed would stick the player to the wall.
+    if (this.x < this.size / 2) {
+      this.x = this.size / 2;
+      this.velocityX = 0;
+    } else if (this.x > canvasWidth - this.size / 2) {
+      this.x = canvasWidth - this.size / 2;
+      this.velocityX = 0;
+    }
+
+    this.inputDir = 0;
+  }
+
+  /** Callers do not check footing; updateJumpAssist() owns that decision. */
+  jump() {
+    this.isStart = false;
+    this.velocity = this.jumpPower * this.jumpMultiplier;
+    this.currentCloud = null;
+    jumpSound.play();
   }
 
   addLife() {
@@ -150,54 +228,47 @@ class Player {
       life += 1;
     }
   }
-  
+
   loseLife() {
-    life -= 1;  // 生命值先減少
-
-    // **當 candy 累積 3 個時，額外補血**
-    if (life === 2 && candyCount === 3) {
-      life += 1;
-      candyCount = 0;
-    }
-
-    // **🔴 只有當 `life = 0` 時，才進入 Game Over**
+    life -= 1;
+    triggerDamageFeedback();
     if (life <= 0) {
       gameScreen = "gameOver";
     }
   }
-  
-  addCandy() {
-    if (candyCount === 2) {
-      if (life !== 3) {
-        this.addLife();
-        candyCount = 0;
-      } else {
-        candyCount += 1;
-      }
-    } else {
-      candyCount += 1;
-    }
-  }
-  
+
+  /**
+   * Swept collision: tests the path travelled between prevY and y rather than a
+   * single instant. Falling speed reaches 15-25 px/frame, so an instant check
+   * misses most objects on longer drops.
+   */
   collidesWith(obj) {
-    let tolerance = 5;
-    if (abs((obj.y + obj.size) - (this.y + this.size / 2)) > tolerance) {
+    if (!(obj instanceof Objects)) {
       return false;
     }
-    let d = abs(this.x - obj.x);
-    if (d < this.size / 2 + obj.size / 2) {
-      if (obj instanceof Object) {
-        return true;
-      }
+
+    const box = obj.bounds();
+
+    const sweptTop = min(this.prevY, this.y) - this.size / 2;
+    const sweptBottom = max(this.prevY, this.y) + this.size / 2;
+    if (sweptBottom < box.top || sweptTop > box.bottom) {
+      return false;
     }
-    return false;
+
+    // Both x values are sprite left edges, so compare centres.
+    const playerCenterX = this.x + this.size / 2;
+    const objCenterX = (box.left + box.right) / 2;
+    return abs(playerCenterX - objCenterX) < (this.size + obj.size) / 2;
   }
-  
+
   show() {
-    if (this.direction === -1) {
-      image(playerLeftImg, this.x, this.y - this.size / 2, this.size, this.size);
-    } else {
-      image(playerRightImg, this.x, this.y - this.size / 2, this.size, this.size);
-    }
-  }  
+    const img = this.direction === -1 ? playerLeftImg : playerRightImg;
+    const tilt = (this.velocityX / MOVE_TUNING.maxSpeed) * MOVE_TUNING.tiltRadians;
+
+    push();
+    translate(this.x + this.size / 2, this.y);
+    rotate(tilt);
+    image(img, -this.size / 2, -this.size / 2, this.size, this.size);
+    pop();
+  }
 }

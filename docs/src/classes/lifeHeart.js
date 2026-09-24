@@ -1,19 +1,12 @@
-/**
- * Represents a heart in the game.
- */
+/** One life indicator in the status bar. */
 class LifeHeart {
-  /**
-   * Creates a new LifeHeart instance.
-   * [x, y] - position of heart.
-   * size - The size of heart's image.
-   */
   constructor(x, y, size) {
     this.x = x;
     this.y = y;
     this.size = size;
   }
-  
-  //Status - 1: heart exist, 0: lose life
+
+  /** status: 1 for a remaining life, 0 for a lost one. */
   show(status) {
     if (status === 1) {
       tint(255, 255);

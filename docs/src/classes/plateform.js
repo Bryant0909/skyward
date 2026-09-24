@@ -1,22 +1,14 @@
-/**
- * Represents a plateform in the game.
- */
+/** The ground at the bottom of the level. Landing on it costs a life. */
 class Plateform {
-  /**
-   * Creates a new Plateform instance.
-   * [x, y] - position of plateform.
-   * w - The width of plateform's image.
-   * h - The height of plateform's image.
-   */
   constructor(x, y) {
     this.x = x;
     this.y = y;
     this.w = canvasWidth;
     this.h = grassHeight;
   }
-  
-  move(){}
-  
+
+  move() {}
+
   show() {
     image(grassImg, this.x - this.w / 2, this.y - this.h, this.w, this.h);
   }
