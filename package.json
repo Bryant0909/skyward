@@ -1,0 +1,19 @@
+{
+  "name": "skyward",
+  "version": "1.0.0",
+  "description": "Up Up Angel - a vertical platformer built with p5.js. Jump from cloud to cloud, dodge ghosts and hellfire, and reach the halo.",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "python tools/devserver.py",
+    "lint": "eslint docs/src",
+    "lint:fix": "eslint docs/src --fix",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "eslint": "^9.13.0",
+    "globals": "^15.11.0",
+    "vitest": "^5.0.1"
+  }
+}
