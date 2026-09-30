@@ -79,11 +79,18 @@ Altitude uses the highest point of the run, so falling never costs you points. H
 ## Development
 
 ```bash
-npm install        # dev dependencies (ESLint, Vitest) — the game itself has none
 npm start          # local server on :8123
+npm install        # dev dependencies, only needed for the next two
 npm test           # run the test suite
 npm run lint       # ESLint
 ```
+
+Running the game needs **Python 3.7+** and nothing else — it has no runtime
+dependencies, and `npm install` is not required to play. Running the tests
+additionally needs **Node 22.12+**.
+
+`npm start` tries `python3` first and falls back to `python`, since macOS
+provides only the former and Windows usually only the latter.
 
 The dev server sends `no-store` headers. That matters more than it sounds: with ordinary caching it is easy to end up running a *mix* of old and new source files after an edit, which produces symptoms that look like real bugs.
 

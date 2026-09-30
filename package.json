@@ -5,7 +5,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "start": "python tools/devserver.py",
+    "start": "python3 tools/devserver.py || python tools/devserver.py",
     "lint": "eslint docs/src",
     "lint:fix": "eslint docs/src --fix",
     "test": "vitest run",
