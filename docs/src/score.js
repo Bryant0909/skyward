@@ -14,7 +14,7 @@ const Score = {
   HEIGHT_PER_POINT: 10,
   CANDY_POINTS: 50,
   WIN_BONUS: 1000,
-  STORAGE_PREFIX: 'upupangel.highscore.',
+  STORAGE_PREFIX: 'skyward.highscore.',
 
   maxHeight: 0,
   candies: 0,

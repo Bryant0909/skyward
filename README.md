@@ -1,10 +1,10 @@
-# Up Up Angel
+# Skyward
 
 A vertical platformer built with [p5.js](https://p5js.org/). Jump from cloud to cloud, dodge ghosts and hellfire, collect candy, and reach the halo at the top.
 
 Unlike *Doodle Jump*, jumping is **manual** — you decide when to leave the ground. That one change turns a reflex game into a game about timing and reading the platforms ahead.
 
-![Up Up Angel gameplay](docs/screenshot.png)
+![Skyward gameplay](docs/screenshot.png)
 
 ## Play
 
@@ -128,7 +128,7 @@ tools/
 
 ## Credits
 
-Up Up Angel began as a six-person group project for **COMSM0166 Software Engineering** at the University of Bristol in 2025. The concept, artwork and original design were developed together by the team:
+Skyward began as a six-person group project for **COMSM0166 Software Engineering** at the University of Bristol in 2025. The concept, artwork and original design were developed together by the team:
 
 | Name | GitHub |
 |---|---|

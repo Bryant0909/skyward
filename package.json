@@ -1,7 +1,7 @@
 {
   "name": "skyward",
   "version": "1.0.0",
-  "description": "Up Up Angel - a vertical platformer built with p5.js. Jump from cloud to cloud, dodge ghosts and hellfire, and reach the halo.",
+  "description": "Skyward - a vertical platformer built with p5.js. Jump from cloud to cloud, dodge ghosts and hellfire, and reach the halo.",
   "private": true,
   "type": "module",
   "scripts": {

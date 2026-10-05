@@ -89,7 +89,7 @@ let winOrLoseWidth = 200, winOrLoseHeight = 50, winOrLoseSpacing = 15, winOrLose
 // p5 waits for everything loaded here before calling setup() or draw().
 function preload() {
   bgImg           = loadImage('assets/bg.png');
-  angelWords      = loadImage('assets/upup.png');
+  angelWords      = loadImage('assets/skyward-logo.png');
   bgGame          = loadImage('assets/gameBackground.jpg');
   grassImg        = loadImage('assets/grass1.png');
   cloudImg        = loadImage('assets/cloud2.png');

@@ -72,7 +72,7 @@ describe('Score', () => {
   });
 
   it('treats malformed stored values as no record', () => {
-    g.storage._map.set('upupangel.highscore.easy', 'not-a-number');
+    g.storage._map.set('skyward.highscore.easy', 'not-a-number');
     expect(g.run("Score.best('easy')")).toBe(0);
   });
 });

@@ -34,7 +34,7 @@ def main():
     socketserver.TCPServer.allow_reuse_address = True
 
     with socketserver.TCPServer(("", port), handler) as httpd:
-        print("Up Up Angel — http://localhost:%d/  (serving %s, no-cache)" % (port, root))
+        print("Skyward — http://localhost:%d/  (serving %s, no-cache)" % (port, root))
         print("Ctrl+C to stop.")
         try:
             httpd.serve_forever()
